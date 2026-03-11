@@ -57,18 +57,24 @@ def clip_and_scale(train: pd.DataFrame, test: pd.DataFrame, feature_cols):
 
 
 def make_prediction_frame(frame: pd.DataFrame, prob, signal, strategy_gross, strategy_net, turnover):
-    out = frame[["date", "y", "ret_a_next", "ret_b_next", "spread_next"]].copy()
+    out = frame[["date", "y", "ret_a_next", "ret_b_next", "spread_next", "spread_t"]].copy()
     out["prob_nvda_beats_tsla"] = prob
     out["signal"] = signal
     out["turnover"] = turnover
     out["strategy_gross"] = strategy_gross
     out["strategy_net"] = strategy_net
+
     out["benchmark_nvda_minus_tsla"] = 0.5 * (frame["ret_a_next"] - frame["ret_b_next"])
     out["benchmark_tsla_minus_nvda"] = -out["benchmark_nvda_minus_tsla"]
-    out["benchmark_mom21"] = 0.5 * (
-        (frame["mom21_diff"] >= 0).astype(int).replace({0: -1, 1: 1})
-        * (frame["ret_a_next"] - frame["ret_b_next"])
-    )
+
+    mom21_signal = (frame["mom21_diff"] >= 0).astype(int).replace({0: -1, 1: 1})
+    out["benchmark_mom21_signal"] = mom21_signal
+    out["benchmark_mom21"] = 0.5 * mom21_signal * (frame["ret_a_next"] - frame["ret_b_next"])
+
+    rw_signal = (frame["spread_t"] >= 0).astype(int).replace({0: -1, 1: 1})
+    out["benchmark_random_walk_signal"] = rw_signal
+    out["benchmark_random_walk"] = 0.5 * rw_signal * (frame["ret_a_next"] - frame["ret_b_next"])
+
     return out
 
 
@@ -125,16 +131,19 @@ def run_experiment():
     pred_test_df = make_prediction_frame(test, prob_test, signal_test, strat_test_gross, strat_test_net, turnover_test)
 
     port_rows = {
-        "train_strategy_gross": portfolio_metrics(pred_train_df["strategy_gross"]),
-        "train_strategy_net": portfolio_metrics(pred_train_df["strategy_net"]),
-        "train_benchmark_nvda_minus_tsla": portfolio_metrics(pred_train_df["benchmark_nvda_minus_tsla"]),
-        "train_benchmark_tsla_minus_nvda": portfolio_metrics(pred_train_df["benchmark_tsla_minus_nvda"]),
-        "train_benchmark_mom21": portfolio_metrics(pred_train_df["benchmark_mom21"]),
-        "test_strategy_gross": portfolio_metrics(pred_test_df["strategy_gross"]),
-        "test_strategy_net": portfolio_metrics(pred_test_df["strategy_net"]),
-        "test_benchmark_nvda_minus_tsla": portfolio_metrics(pred_test_df["benchmark_nvda_minus_tsla"]),
-        "test_benchmark_tsla_minus_nvda": portfolio_metrics(pred_test_df["benchmark_tsla_minus_nvda"]),
-        "test_benchmark_mom21": portfolio_metrics(pred_test_df["benchmark_mom21"]),
+    "train_strategy_gross": portfolio_metrics(pred_train_df["strategy_gross"]),
+    "train_strategy_net": portfolio_metrics(pred_train_df["strategy_net"]),
+    "train_benchmark_nvda_minus_tsla": portfolio_metrics(pred_train_df["benchmark_nvda_minus_tsla"]),
+    "train_benchmark_tsla_minus_nvda": portfolio_metrics(pred_train_df["benchmark_tsla_minus_nvda"]),
+    "train_benchmark_mom21": portfolio_metrics(pred_train_df["benchmark_mom21"]),
+    "train_benchmark_random_walk": portfolio_metrics(pred_train_df["benchmark_random_walk"]),
+
+    "test_strategy_gross": portfolio_metrics(pred_test_df["strategy_gross"]),
+    "test_strategy_net": portfolio_metrics(pred_test_df["strategy_net"]),
+    "test_benchmark_nvda_minus_tsla": portfolio_metrics(pred_test_df["benchmark_nvda_minus_tsla"]),
+    "test_benchmark_tsla_minus_nvda": portfolio_metrics(pred_test_df["benchmark_tsla_minus_nvda"]),
+    "test_benchmark_mom21": portfolio_metrics(pred_test_df["benchmark_mom21"]),
+    "test_benchmark_random_walk": portfolio_metrics(pred_test_df["benchmark_random_walk"]),
     }
     portfolio_table = pd.DataFrame(port_rows).T
 
