@@ -2,9 +2,12 @@ import numpy as np
 import pandas as pd
 
 
-def probabilities_to_signal(prob, threshold: float = 0.5):
+def probabilities_to_signal(prob, long_threshold: float = 0.8, short_threshold: float = 0.2):
     prob = np.asarray(prob)
-    return np.where(prob >= threshold, 1, -1)
+    signal = np.zeros(len(prob), dtype=int)
+    signal[prob >= long_threshold] = 1
+    signal[prob <= short_threshold] = -1
+    return signal
 
 
 def compute_turnover(signal) -> np.ndarray:
@@ -38,7 +41,7 @@ def max_drawdown(returns) -> float:
     return dd.min()
 
 
-def portfolio_metrics(returns) -> pd.Series:
+def portfolio_metrics(returns, signal=None) -> pd.Series:
     returns = pd.Series(returns).dropna()
 
     mean_daily = returns.mean()
@@ -60,4 +63,9 @@ def portfolio_metrics(returns) -> pd.Series:
         "calmar": calmar,
         "hit_rate": hit_rate,
     }
+
+    if signal is not None:
+        signal = pd.Series(signal)
+        out["active_rate"] = (signal != 0).mean()
+
     return pd.Series(out)
