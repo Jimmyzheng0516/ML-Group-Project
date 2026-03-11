@@ -60,6 +60,7 @@ def make_prediction_frame(frame: pd.DataFrame, prob, signal, strategy_gross, str
     out = frame[["date", "y", "ret_a_next", "ret_b_next", "spread_next", "spread_t"]].copy()
     out["prob_nvda_beats_tsla"] = prob
     out["signal"] = signal
+    out["is_active"] = (out["signal"] != 0).astype(int)
     out["turnover"] = turnover
     out["strategy_gross"] = strategy_gross
     out["strategy_net"] = strategy_net
@@ -115,8 +116,17 @@ def run_experiment():
     class_train = classification_metrics(y_train, pred_train, prob_train)
     class_test = classification_metrics(y_test, pred_test, prob_test)
 
-    signal_train = probabilities_to_signal(prob_train, threshold=config.THRESHOLD)
-    signal_test = probabilities_to_signal(prob_test, threshold=config.THRESHOLD)
+    signal_train = probabilities_to_signal(
+    prob_train,
+    long_threshold=config.LONG_THRESHOLD,
+    short_threshold=config.SHORT_THRESHOLD,
+    )
+
+    signal_test = probabilities_to_signal(
+        prob_test,
+        long_threshold=config.LONG_THRESHOLD,
+        short_threshold=config.SHORT_THRESHOLD,
+    )
 
     turnover_train = compute_turnover(signal_train)
     turnover_test = compute_turnover(signal_test)
