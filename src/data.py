@@ -3,8 +3,7 @@ import pandas as pd
 
 
 def load_raw_data(path: Path) -> pd.DataFrame:
-    df = pd.read_pickle(path)
-    df = df.copy()
+    df = pd.read_pickle(path).copy()
     df["date"] = pd.to_datetime(df["date"])
     df["datadate"] = pd.to_datetime(df["datadate"])
     return df
